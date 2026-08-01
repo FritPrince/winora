@@ -1,14 +1,29 @@
 "use client";
 
+import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart/cart-context";
 import { formatEUR, formatXOF } from "@/lib/currency";
+import { checkout } from "./actions";
+
+function CheckoutError() {
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+  if (!error) return null;
+  return (
+    <p className="mt-6 rounded-lg border border-ember/30 bg-ember/10 px-4 py-3 text-sm text-foreground">
+      {error}
+    </p>
+  );
+}
 
 export default function PanierPage() {
   const { items, setQuantity, removeItem, totalXof, totalEur } = useCart();
+  const [isPending, startTransition] = React.useTransition();
 
   if (items.length === 0) {
     return (
@@ -105,8 +120,17 @@ export default function PanierPage() {
         </span>
       </div>
 
-      <Button size="lg" className="mt-6 w-full" disabled>
-        Paiement bientôt disponible
+      <React.Suspense fallback={null}>
+        <CheckoutError />
+      </React.Suspense>
+
+      <Button
+        size="lg"
+        className="mt-6 w-full"
+        disabled={isPending}
+        onClick={() => startTransition(() => checkout(items))}
+      >
+        {isPending ? "Redirection vers le paiement..." : "Passer commande"}
       </Button>
     </main>
   );
