@@ -1,3 +1,4 @@
+import { cache } from "react";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 
@@ -5,20 +6,36 @@ import { AddToCartButton } from "@/components/add-to-cart-button";
 import { formatEUR, formatXOF } from "@/lib/currency";
 import { createClient } from "@/lib/supabase/server";
 
+// Memoized per request so generateMetadata and the page component share
+// a single query instead of fetching the product twice.
+const getProduct = cache(async (slug: string) => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("products")
+    .select("*")
+    .eq("slug", slug)
+    .eq("status", "published")
+    .single();
+  return data;
+});
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const product = await getProduct(slug);
+  return { title: product ? `${product.title} — Winora` : "Winora" };
+}
+
 export default async function ProductPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data: product } = await supabase
-    .from("products")
-    .select("*")
-    .eq("slug", slug)
-    .eq("status", "published")
-    .single();
+  const product = await getProduct(slug);
 
   if (!product) {
     notFound();

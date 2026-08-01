@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { ProductCard } from "@/components/product-card";
 import { createClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Catalogue — Winora",
+};
 
 export default async function ProduitsPage({
   searchParams,
