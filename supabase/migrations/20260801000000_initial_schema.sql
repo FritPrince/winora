@@ -7,21 +7,6 @@ create extension if not exists "pgcrypto";
 -- Helpers
 -- ---------------------------------------------------------------------
 
--- security definer + fixed search_path so this can be called from RLS
--- policies (including on `profiles` itself) without recursive RLS checks.
-create or replace function public.is_admin()
-returns boolean
-language sql
-security definer
-set search_path = public
-stable
-as $$
-  select exists (
-    select 1 from public.profiles
-    where id = auth.uid() and role = 'admin'
-  );
-$$;
-
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -46,6 +31,23 @@ create table public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- security definer + fixed search_path so this can be called from RLS
+-- policies (including on `profiles` itself) without recursive RLS checks.
+-- Must be defined after `profiles` exists — a `language sql` function
+-- body is parsed and planned against the catalog at creation time.
+create or replace function public.is_admin()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
 
 alter table public.profiles enable row level security;
 
